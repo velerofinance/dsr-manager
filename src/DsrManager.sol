@@ -30,7 +30,7 @@ interface PotLike {
 }
 
 interface JoinLike {
-    function dai() external view returns (address);
+    function usdv() external view returns (address);
     function join(address, uint256) external;
     function exit(address, uint256) external;
 }
@@ -42,8 +42,8 @@ interface GemLike {
 
 contract DsrManager {
     PotLike  public pot;
-    GemLike  public dai;
-    JoinLike public daiJoin;
+    GemLike  public usdv;
+    JoinLike public usdvJoin;
 
     uint256 public supply;
 
@@ -75,36 +75,36 @@ contract DsrManager {
         z = add(mul(x, RAY), sub(y, 1)) / y;
     }
 
-    constructor(address pot_, address daiJoin_) public {
+    constructor(address pot_, address usdvJoin_) public {
         pot = PotLike(pot_);
-        daiJoin = JoinLike(daiJoin_);
-        dai = GemLike(daiJoin.dai());
+        usdvJoin = JoinLike(usdvJoin_);
+        usdv = GemLike(usdvJoin.usdv());
 
         VatLike vat = VatLike(pot.vat());
-        vat.hope(address(daiJoin));
+        vat.hope(address(usdvJoin));
         vat.hope(address(pot));
-        dai.approve(address(daiJoin), uint256(-1));
+        usdv.approve(address(usdvJoin), uint256(-1));
     }
 
-    function daiBalance(address usr) external returns (uint256 wad) {
+    function usdvBalance(address usr) external returns (uint256 wad) {
         uint256 chi = (now > pot.rho()) ? pot.drip() : pot.chi();
         wad = rmul(chi, pieOf[usr]);
     }
 
-    // wad is denominated in dai
+    // wad is denominated in usdv
     function join(address dst, uint256 wad) external {
         uint256 chi = (now > pot.rho()) ? pot.drip() : pot.chi();
         uint256 pie = rdiv(wad, chi);
         pieOf[dst] = add(pieOf[dst], pie);
         supply = add(supply, pie);
 
-        dai.transferFrom(msg.sender, address(this), wad);
-        daiJoin.join(address(this), wad);
+        usdv.transferFrom(msg.sender, address(this), wad);
+        usdvJoin.join(address(this), wad);
         pot.join(pie);
         emit Join(dst, wad);
     }
 
-    // wad is denominated in dai
+    // wad is denominated in usdv
     function exit(address dst, uint256 wad) external {
         uint256 chi = (now > pot.rho()) ? pot.drip() : pot.chi();
         uint256 pie = rdivup(wad, chi);
@@ -116,7 +116,7 @@ contract DsrManager {
 
         pot.exit(pie);
         uint256 amt = rmul(chi, pie);
-        daiJoin.exit(dst, amt);
+        usdvJoin.exit(dst, amt);
         emit Exit(dst, amt);
     }
 
@@ -129,7 +129,7 @@ contract DsrManager {
 
         pot.exit(pie);
         uint256 amt = rmul(chi, pie);
-        daiJoin.exit(dst, amt);
+        usdvJoin.exit(dst, amt);
         emit Exit(dst, amt);
     }
 }
